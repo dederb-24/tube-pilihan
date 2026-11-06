@@ -80,6 +80,9 @@ label.sw{display:flex;align-items:center;gap:8px;font-size:14px}
     </div>
     <div id="addStatus" class="muted"></div>
     <div id="chList"></div>
+    <h3>Proxy sendiri (opsional)</h3>
+    <div class="row"><input id="proxyIn" type="text" placeholder="https://contoh.workers.dev/?url=" autocapitalize="off" autocorrect="off"><button id="proxySave">Simpan</button></div>
+    <div class="muted">Isi hanya jika channel masih gagal ditambahkan. Kosongkan untuk memakai proxy bawaan.</div>
     <h3>Ubah PIN</h3>
     <div class="row"><input id="pinOld" type="password" inputmode="numeric" placeholder="PIN lama"><input id="pinNew" type="password" inputmode="numeric" placeholder="PIN baru"><button id="pinSave">Simpan</button></div>
     <div id="pinStatus" class="muted"></div>
@@ -112,8 +115,34 @@ let videos=store.get('videos',[]);
 let filter='all', queue=[], qi=-1, player=null, apiReady=false, pending=null;
 
 /* ---------- jaringan (RSS channel lewat proxy CORS) ---------- */
-const PROXIES=[u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?'+encodeURIComponent(u)];
-async function pfetch(url){let err;for(const p of PROXIES){try{const r=await fetch(p(url));if(r.ok){const t=await r.text();if(t)return t}}catch(e){err=e}}throw err||new Error('Gagal mengambil data')}
+const PROXIES=[
+  u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
+  u=>'https://api.allorigins.win/get?url='+encodeURIComponent(u),
+  u=>'https://api.codetabs.com/v1/proxy/?quest='+encodeURIComponent(u),
+  u=>'https://corsproxy.io/?url='+encodeURIComponent(u),
+  u=>'https://thingproxy.freeboard.io/fetch/'+u,
+  u=>'https://cors.eu.org/'+u
+];
+async function tryFetch(reqUrl,check){
+  const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),12000);
+  try{
+    const r=await fetch(reqUrl,{signal:ctl.signal});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    let t=await r.text();
+    if(t.startsWith('{')&&t.includes('"contents"')){try{t=JSON.parse(t).contents||t}catch{}}
+    if(!t||(check&&!check(t)))throw new Error('isi tidak sesuai');
+    return t;
+  }finally{clearTimeout(to)}
+}
+async function pfetch(url,check){
+  const errs=[];
+  const custom=store.get('proxy','');
+  const list=(custom?[u=>custom+encodeURIComponent(u)]:[]).concat(PROXIES);
+  for(const p of list){
+    try{return await tryFetch(p(url),check)}catch(e){errs.push(e.message)}
+  }
+  throw new Error('semua proxy gagal ('+errs.slice(0,3).join(', ')+')');
+}
 async function resolveId(input){
   input=input.trim();
   let m=input.match(/UC[\w-]{22}/); if(m) return m[0];
@@ -121,13 +150,13 @@ async function resolveId(input){
   if(/^https?:/i.test(input)) url=input;
   else if(input[0]==='@') url='https://www.youtube.com/'+input;
   else url='https://www.youtube.com/@'+input;
-  const html=await pfetch(url);
+  const html=await pfetch(url,t=>/UC[\w-]{22}/.test(t));
   const id=(html.match(/"channelId":"(UC[\w-]{22})"/)||html.match(/channel_id=(UC[\w-]{22})/)||html.match(/"externalId":"(UC[\w-]{22})"/)||[])[1];
   if(!id) throw new Error('Channel tidak ditemukan');
   return id;
 }
 async function loadFeed(id,fallbackName){
-  const xml=await pfetch('https://www.youtube.com/feeds/videos.xml?channel_id='+id);
+  const xml=await pfetch('https://www.youtube.com/feeds/videos.xml?channel_id='+id,t=>t.includes('<feed'));
   const d=new DOMParser().parseFromString(xml,'text/xml');
   const name=d.querySelector('feed > title')?.textContent||fallbackName||id;
   const out=[...d.getElementsByTagName('entry')].map(e=>({
@@ -243,6 +272,9 @@ $('#pinSave').onclick=()=>{
   if(!/^\d{4,8}$/.test(n)){s.textContent='PIN baru harus 4–8 angka.';return}
   store.set('pin',n);$('#pinOld').value=$('#pinNew').value='';s.textContent='PIN diubah.';
 };
+
+$('#proxyIn').value=store.get('proxy','');
+$('#proxySave').onclick=()=>{store.set('proxy',$('#proxyIn').value.trim());$('#addStatus').textContent='Proxy disimpan.'};
 
 /* ---------- mulai ---------- */
 render();renderChannels();
