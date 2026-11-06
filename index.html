@@ -42,7 +42,8 @@ input[type=text],input[type=password],input[type=search]{flex:1;min-width:0;back
 h3{margin:20px 0 8px;font-size:15px}
 #player{position:relative}
 .pwrap{position:sticky;top:calc(env(safe-area-inset-top) + 0px);z-index:40;background:#000;aspect-ratio:16/9;width:100%}
-.pwrap iframe,.pwrap div{width:100%;height:100%}
+.pwrap>iframe,.pwrap>div#yt{width:100%;height:100%}
+#fsLock{position:absolute;top:10px;left:10px;z-index:5;width:42px;height:42px;padding:0;border-radius:50%;background:rgba(0,0,0,.55);font-size:18px}
 .pwrap:fullscreen{aspect-ratio:auto;background:#000}
 .pwrap:-webkit-full-screen{aspect-ratio:auto;background:#000}
 .pinfo{padding:10px 12px}
@@ -92,7 +93,7 @@ label.sw{display:flex;align-items:center;gap:8px;font-size:14px}
 </div>
 
 <div id="vPlay" hidden>
-  <div class="pwrap"><div id="yt"></div></div>
+  <div class="pwrap"><div id="yt"></div><button id="fsLock" hidden title="Kunci layar">🔒</button></div>
   <div class="pinfo">
     <div class="t" id="pTitle"></div>
     <div class="muted" id="pCh"></div>
@@ -224,10 +225,11 @@ $('#addBtn').onclick=async()=>{
 };
 
 /* ---------- pemutar ---------- */
+const canFs=!!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
 const tag=document.createElement('script');tag.src='https://www.youtube.com/iframe_api';document.head.appendChild(tag);
 window.onYouTubeIframeAPIReady=()=>{apiReady=true;if(pending){const p=pending;pending=null;playVideo(p.id,p.q)}};
 function makePlayer(id){
-  player=new YT.Player('yt',{videoId:id,playerVars:{autoplay:1,playsinline:1,rel:0,fs:1,modestbranding:1,iv_load_policy:3,disablekb:0},
+  player=new YT.Player('yt',{videoId:id,playerVars:{autoplay:1,playsinline:1,rel:0,fs:canFs?0:1,modestbranding:1,iv_load_policy:3,disablekb:0},
     events:{onReady:e=>e.target.playVideo(),onStateChange:e=>{if(e.data===0)playNext()},onError:()=>playNext()}});
 }
 function playVideo(id,q){
@@ -259,6 +261,18 @@ $('#pFull').onclick=async()=>{
     try{await screen.orientation.lock('landscape')}catch{}
   }catch{alert('Browser ini tidak mendukung layar penuh dari tombol ini. Pakai tombol layar penuh di pojok kanan bawah video.')}
 };
+if(!canFs)$('#pFull').hidden=true;
+function fsEl(){return document.fullscreenElement||document.webkitFullscreenElement}
+function syncLock(){
+  const lock=$('#lock'),w=document.querySelector('.pwrap');
+  const inFs=fsEl()===w;
+  if(inFs&&lock.parentNode!==w)w.appendChild(lock);
+  else if(!inFs&&lock.parentNode!==document.body)document.body.appendChild(lock);
+  $('#fsLock').hidden=!inFs||store.get('locked',false);
+  if(!inFs){try{screen.orientation.unlock()}catch{}}
+}
+['fullscreenchange','webkitfullscreenchange'].forEach(ev=>document.addEventListener(ev,syncLock));
+$('#fsLock').onclick=()=>setLock(true);
 $('#pBack').onclick=()=>{try{player&&player.stopVideo()}catch{}go('home')};
 
 /* ---------- kunci layar ---------- */
@@ -266,7 +280,7 @@ let wl=null;
 async function awake(on){try{if(on&&'wakeLock' in navigator){wl=await navigator.wakeLock.request('screen')}else if(wl){await wl.release();wl=null}}catch{}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&store.get('locked',false))awake(true)});
 function setLock(on){
-  store.set('locked',on);$('#lock').hidden=!on;awake(on);
+  store.set('locked',on);$('#lock').hidden=!on;awake(on);syncLock();
   if(on){$('#pin').value='';document.documentElement.style.overflow='hidden'}else{document.documentElement.style.overflow=''}
 }
 function pinOk(){return $('#pin').value===store.get('pin','1234')}
