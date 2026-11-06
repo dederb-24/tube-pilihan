@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tube Pilihan</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f0f0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tube Pilihan">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:#0f0f0f;color:#f1f1f1;font-family:-apple-system,system-ui,Roboto,sans-serif}
+body{min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
+header{position:sticky;top:0;z-index:50;background:#0f0f0f;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #272727}
+header h1{font-size:18px;margin:0;flex:1}
+header h1 span{color:#ff3b30}
+button{font:inherit;color:inherit;background:#272727;border:0;border-radius:18px;padding:8px 14px;cursor:pointer}
+button.primary{background:#ff3b30;color:#fff}
+button.ghost{background:transparent;padding:6px 10px}
+.tabs{display:flex;gap:8px;padding:8px 12px}
+.tabs button.on{background:#f1f1f1;color:#0f0f0f}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:8px 12px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips button{white-space:nowrap;flex:none}
+.chips button.on{background:#f1f1f1;color:#0f0f0f}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;padding:8px 12px 24px}
+.card{cursor:pointer}
+.card img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;background:#222;display:block}
+.card .t{font-size:14px;font-weight:600;margin:8px 0 2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .m,.muted{font-size:12px;color:#aaa}
+.empty{padding:40px 20px;text-align:center;color:#aaa}
+.panel{padding:12px}
+.row{display:flex;gap:8px;margin-bottom:12px}
+input[type=text],input[type=password],input[type=search]{flex:1;min-width:0;background:#1a1a1a;color:#fff;border:1px solid #333;border-radius:10px;padding:10px 12px;font:inherit}
+.ch{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #222}
+.ch .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+h3{margin:20px 0 8px;font-size:15px}
+#player{position:relative}
+.pwrap{position:sticky;top:calc(env(safe-area-inset-top) + 0px);z-index:40;background:#000;aspect-ratio:16/9;width:100%}
+.pwrap iframe,.pwrap div{width:100%;height:100%}
+.pinfo{padding:10px 12px}
+.pinfo .t{font-weight:600;font-size:16px}
+.next{display:flex;gap:10px;padding:8px 12px;cursor:pointer}
+.next img{width:140px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;flex:none;background:#222}
+.next .t{font-size:13px;font-weight:600;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+label.sw{display:flex;align-items:center;gap:8px;font-size:14px}
+#status{font-size:13px;color:#aaa;min-height:18px;margin:4px 0}
+[hidden]{display:none!important}
+#lock{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0);touch-action:none;user-select:none;-webkit-user-select:none}
+.pinbox{position:absolute;top:calc(env(safe-area-inset-top) + 8px);right:8px;display:flex;align-items:center;gap:6px;background:rgba(20,20,20,.88);padding:6px 8px;border-radius:14px;font-size:13px}
+.pinbox input{width:84px;flex:none;padding:7px 8px;text-align:center;letter-spacing:4px}
+.pinbox.bad{outline:2px solid #ff3b30}
+</style>
+</head>
+<body>
+<header>
+  <h1><span>▶</span> Tube Pilihan</h1>
+  <button id="btnRefresh" class="ghost" title="Segarkan">⟳</button>
+  <button id="btnLock" class="primary">🔒 Kunci</button>
+</header>
+
+<div id="vHome">
+  <div class="tabs"><button data-go="home" class="on">Beranda</button><button data-go="chan">Channel</button></div>
+  <div class="chips" id="chips"></div>
+  <div id="status"></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div id="vChan" hidden>
+  <div class="tabs"><button data-go="home">Beranda</button><button data-go="chan" class="on">Channel</button></div>
+  <div class="panel">
+    <div class="row">
+      <input id="addIn" type="text" placeholder="@handle, link channel, atau ID UC..." autocapitalize="off" autocorrect="off">
+      <button id="addBtn" class="primary">Tambah</button>
+    </div>
+    <div id="addStatus" class="muted"></div>
+    <div id="chList"></div>
+    <h3>Ubah PIN</h3>
+    <div class="row"><input id="pinOld" type="password" inputmode="numeric" placeholder="PIN lama"><input id="pinNew" type="password" inputmode="numeric" placeholder="PIN baru"><button id="pinSave">Simpan</button></div>
+    <div id="pinStatus" class="muted"></div>
+  </div>
+</div>
+
+<div id="vPlay" hidden>
+  <div class="pwrap"><div id="yt"></div></div>
+  <div class="pinfo">
+    <div class="t" id="pTitle"></div>
+    <div class="muted" id="pCh"></div>
+    <div class="row" style="margin-top:10px;align-items:center">
+      <button id="pBack">← Kembali</button>
+      <label class="sw"><input type="checkbox" id="auto" checked> Putar berikutnya otomatis</label>
+    </div>
+  </div>
+  <h3 style="padding:0 12px">Selanjutnya</h3>
+  <div id="nextList"></div>
+</div>
+
+<div id="lock" hidden>
+  <div class="pinbox" id="pinbox">🔒 <input id="pin" type="password" inputmode="numeric" placeholder="PIN" autocomplete="off"><button id="unlock" class="primary">Buka</button></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const store={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+let channels=store.get('channels',[]);
+let videos=store.get('videos',[]);
+let filter='all', queue=[], qi=-1, player=null, apiReady=false, pending=null;
+
+/* ---------- jaringan (RSS channel lewat proxy CORS) ---------- */
+const PROXIES=[u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?'+encodeURIComponent(u)];
+async function pfetch(url){let err;for(const p of PROXIES){try{const r=await fetch(p(url));if(r.ok){const t=await r.text();if(t)return t}}catch(e){err=e}}throw err||new Error('Gagal mengambil data')}
+async function resolveId(input){
+  input=input.trim();
+  let m=input.match(/UC[\w-]{22}/); if(m) return m[0];
+  let url;
+  if(/^https?:/i.test(input)) url=input;
+  else if(input[0]==='@') url='https://www.youtube.com/'+input;
+  else url='https://www.youtube.com/@'+input;
+  const html=await pfetch(url);
+  const id=(html.match(/"channelId":"(UC[\w-]{22})"/)||html.match(/channel_id=(UC[\w-]{22})/)||html.match(/"externalId":"(UC[\w-]{22})"/)||[])[1];
+  if(!id) throw new Error('Channel tidak ditemukan');
+  return id;
+}
+async function loadFeed(id,fallbackName){
+  const xml=await pfetch('https://www.youtube.com/feeds/videos.xml?channel_id='+id);
+  const d=new DOMParser().parseFromString(xml,'text/xml');
+  const name=d.querySelector('feed > title')?.textContent||fallbackName||id;
+  const out=[...d.getElementsByTagName('entry')].map(e=>({
+    id:e.getElementsByTagName('yt:videoId')[0].textContent,
+    title:e.getElementsByTagName('title')[0].textContent,
+    pub:e.getElementsByTagName('published')[0].textContent,
+    chId:id,ch:name}));
+  return {name,out};
+}
+async function refresh(){
+  if(!channels.length){videos=[];store.set('videos',videos);render();return}
+  $('#status').textContent='Memuat video...';
+  const res=await Promise.allSettled(channels.map(c=>loadFeed(c.id,c.name)));
+  let all=[],fail=0;
+  res.forEach((r,i)=>{if(r.status==='fulfilled'){all=all.concat(r.value.out);channels[i].name=r.value.name}else{fail++;all=all.concat(videos.filter(v=>v.chId===channels[i].id))}});
+  all.sort((a,b)=>new Date(b.pub)-new Date(a.pub));
+  videos=all;store.set('videos',videos);store.set('channels',channels);store.set('last',Date.now());
+  $('#status').textContent=fail?`${fail} channel gagal dimuat, coba segarkan lagi.`:'';
+  render();renderChannels();
+}
+
+/* ---------- tampilan ---------- */
+function ago(s){const d=(Date.now()-new Date(s))/1000;for(const[n,l]of [[31536000,'tahun'],[2592000,'bulan'],[604800,'minggu'],[86400,'hari'],[3600,'jam'],[60,'menit']])if(d>=n)return Math.floor(d/n)+' '+l+' lalu';return 'baru saja'}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const thumb=id=>`https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
+function list(){return filter==='all'?videos:videos.filter(v=>v.chId===filter)}
+function render(){
+  const chips=$('#chips');
+  chips.innerHTML=channels.length?`<button data-f="all" class="${filter==='all'?'on':''}">Semua</button>`+channels.map(c=>`<button data-f="${c.id}" class="${filter===c.id?'on':''}">${esc(c.name)}</button>`).join(''):'';
+  const l=list();
+  $('#grid').innerHTML=l.length?l.map(v=>`<div class="card" data-v="${v.id}"><img loading="lazy" src="${thumb(v.id)}" alt=""><div class="t">${esc(v.title)}</div><div class="m">${esc(v.ch)} · ${ago(v.pub)}</div></div>`).join(''):`<div class="empty" style="grid-column:1/-1">${channels.length?'Belum ada video.':'Belum ada channel. Buka tab <b>Channel</b> untuk menambahkan.'}</div>`;
+}
+function renderChannels(){
+  $('#chList').innerHTML=channels.length?channels.map(c=>`<div class="ch"><div class="n">${esc(c.name)}</div><button data-del="${c.id}">Hapus</button></div>`).join(''):'<div class="muted">Belum ada channel.</div>';
+}
+function go(v){
+  $('#vHome').hidden=v!=='home';$('#vChan').hidden=v!=='chan';$('#vPlay').hidden=v!=='play';
+  window.scrollTo(0,0);
+}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-go],[data-f],[data-v],[data-del],[data-nx]');if(!t)return;
+  if(t.dataset.go)go(t.dataset.go);
+  else if(t.dataset.f){filter=t.dataset.f;render()}
+  else if(t.dataset.v){playVideo(t.dataset.v,list())}
+  else if(t.dataset.nx){playVideo(t.dataset.nx,queue)}
+  else if(t.dataset.del){channels=channels.filter(c=>c.id!==t.dataset.del);videos=videos.filter(v=>v.chId!==t.dataset.del);if(filter===t.dataset.del)filter='all';store.set('channels',channels);store.set('videos',videos);render();renderChannels()}
+});
+$('#btnRefresh').onclick=refresh;
+
+/* ---------- tambah channel ---------- */
+$('#addBtn').onclick=async()=>{
+  const v=$('#addIn').value.trim();if(!v)return;
+  const st=$('#addStatus');st.textContent='Mencari channel...';
+  try{
+    const id=await resolveId(v);
+    if(channels.some(c=>c.id===id)){st.textContent='Channel sudah ada.';return}
+    const f=await loadFeed(id);
+    channels.push({id,name:f.name});store.set('channels',channels);
+    $('#addIn').value='';st.textContent='Ditambahkan: '+f.name;
+    await refresh();
+  }catch(e){st.textContent='Gagal: '+e.message+'. Coba tempel ID channel (diawali UC) atau link channel.'}
+};
+
+/* ---------- pemutar ---------- */
+const tag=document.createElement('script');tag.src='https://www.youtube.com/iframe_api';document.head.appendChild(tag);
+window.onYouTubeIframeAPIReady=()=>{apiReady=true;if(pending){const p=pending;pending=null;playVideo(p.id,p.q)}};
+function makePlayer(id){
+  player=new YT.Player('yt',{videoId:id,playerVars:{autoplay:1,playsinline:1,rel:0,fs:0,modestbranding:1,iv_load_policy:3,disablekb:0},
+    events:{onReady:e=>e.target.playVideo(),onStateChange:e=>{if(e.data===0)playNext()},onError:()=>playNext()}});
+}
+function playVideo(id,q){
+  q=q&&q.length?q:videos;
+  queue=q;qi=Math.max(0,queue.findIndex(v=>v.id===id));
+  const v=queue[qi]||{id,title:'',ch:''};
+  go('play');
+  $('#pTitle').textContent=v.title;$('#pCh').textContent=v.ch;
+  renderNext();
+  if(!apiReady){pending={id,q};return}
+  if(!player)makePlayer(id);else if(player.loadVideoById)player.loadVideoById(id);
+  store.set('lastPlayed',id);
+}
+function renderNext(){
+  const n=queue.slice(qi+1).concat(queue.slice(0,qi));
+  $('#nextList').innerHTML=n.map(v=>`<div class="next" data-nx="${v.id}"><img loading="lazy" src="${thumb(v.id)}" alt=""><div><div class="t">${esc(v.title)}</div><div class="muted">${esc(v.ch)} · ${ago(v.pub)}</div></div></div>`).join('')||'<div class="muted" style="padding:0 12px">Tidak ada video lain.</div>';
+}
+function playNext(){
+  if(!$('#auto').checked||queue.length<2)return;
+  playVideo(queue[(qi+1)%queue.length].id,queue);
+}
+$('#pBack').onclick=()=>{try{player&&player.stopVideo()}catch{}go('home')};
+
+/* ---------- kunci layar ---------- */
+let wl=null;
+async function awake(on){try{if(on&&'wakeLock' in navigator){wl=await navigator.wakeLock.request('screen')}else if(wl){await wl.release();wl=null}}catch{}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&store.get('locked',false))awake(true)});
+function setLock(on){
+  store.set('locked',on);$('#lock').hidden=!on;awake(on);
+  if(on){$('#pin').value='';document.documentElement.style.overflow='hidden'}else{document.documentElement.style.overflow=''}
+}
+function pinOk(){return $('#pin').value===store.get('pin','1234')}
+function tryUnlock(){
+  if(pinOk())setLock(false);
+  else{const b=$('#pinbox');b.classList.add('bad');$('#pin').value='';setTimeout(()=>b.classList.remove('bad'),600)}
+}
+$('#btnLock').onclick=()=>setLock(true);
+$('#unlock').onclick=tryUnlock;
+$('#pin').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock()});
+['touchmove','wheel'].forEach(ev=>$('#lock').addEventListener(ev,e=>e.preventDefault(),{passive:false}));
+$('#lock').addEventListener('contextmenu',e=>e.preventDefault());
+$('#pinSave').onclick=()=>{
+  const o=$('#pinOld').value,n=$('#pinNew').value,s=$('#pinStatus');
+  if(o!==store.get('pin','1234')){s.textContent='PIN lama salah.';return}
+  if(!/^\d{4,8}$/.test(n)){s.textContent='PIN baru harus 4–8 angka.';return}
+  store.set('pin',n);$('#pinOld').value=$('#pinNew').value='';s.textContent='PIN diubah.';
+};
+
+/* ---------- mulai ---------- */
+render();renderChannels();
+if(store.get('locked',false))setLock(true);
+if(channels.length&&(Date.now()-store.get('last',0)>30*60*1000||!videos.length))refresh();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
